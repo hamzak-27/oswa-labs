@@ -1,0 +1,131 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+.env.staging
+*.env
+credentials.txt
+DEPLOYMENT_CREDENTIALS.txt
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+.ENV/
+
+# Docker
+.docker/
+
+# Logs
+logs/
+*.log
+/var/log/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# VPN certificates and keys
+*.key
+*.crt
+*.csr
+*.pem
+*.p12
+*.ovpn
+/etc/openvpn/
+vpn-configs/
+
+# SSL certificates
+ssl/
+certs/
+*.cert
+
+# Backup files
+*.backup
+*.bak
+backups/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.tmp
+*.temp
+Desktop.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Test coverage
+coverage/
+*.lcov
+
+# MySQL data files
+mysql_data*/
+
+# Redis data files  
+redis_data*/
+
+# Nginx temp files
+nginx/logs/
+nginx/tmp/
+
+# Docker volumes data
+*_data/
+*-data/
+
+# Runtime files
+*.pid
+*.sock
+
+# Package files
+*.tar.gz
+*.zip
+*.rar
+
+# Sensitive data patterns
+*password*
+*secret*
+*private*
+*token*
+
+# But keep example/template files
+!example.env
+!.env.example
+!*template*
+!*example*

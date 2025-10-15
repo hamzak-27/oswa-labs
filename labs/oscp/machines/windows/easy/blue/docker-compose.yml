@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  blue:
+    build: .
+    container_name: oscp-blue-${USER_ID:-123}
+    hostname: blue
+    
+    # Network configuration
+    networks:
+      oscp_network:
+        ipv4_address: 10.11.${USER_ID:-123}.11
+    
+    # Port mappings (for debugging)
+    ports:
+      - "61999:9999"   # Vulnerable Service
+      - "61023:22"     # SSH
+    
+    # Environment variables
+    environment:
+      - MACHINE_NAME=Blue
+      - MACHINE_IP=10.11.${USER_ID:-123}.11
+      - USER_ID=${USER_ID:-123}
+      - DIFFICULTY=Easy
+      - VULNERABILITY=Buffer Overflow
+      - FLAG_USER=OSCP{blue_user_bof_${USER_ID:-123}_$(date +%s)}
+      - FLAG_ROOT=OSCP{blue_root_bof_${USER_ID:-123}_$(date +%s)}
+    
+    # Security context (less secure for buffer overflow practice)
+    privileged: false
+    cap_add:
+      - SYS_PTRACE  # Needed for debugging
+    
+    # Resource limits
+    mem_limit: 256m
+    cpus: '0.3'
+    
+    # Volumes
+    volumes:
+      - blue_logs:/var/log
+      - blue_home:/home
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "netstat", "-tlnp", "|", "grep", ":9999"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Labels for management
+    labels:
+      - "oscp.machine=blue"
+      - "oscp.difficulty=easy"
+      - "oscp.os=windows7"
+      - "oscp.vulnerability=buffer-overflow"
+      - "oscp.type=bof-practice"
+
+networks:
+  oscp_network:
+    external: true
+    name: oscp-lab-network-${USER_ID:-123}
+
+volumes:
+  blue_logs:
+    driver: local
+    labels:
+      - "oscp.machine=blue"
+      - "oscp.type=logs"
+  
+  blue_home:
+    driver: local
+    labels:
+      - "oscp.machine=blue"
+      - "oscp.type=user-data"

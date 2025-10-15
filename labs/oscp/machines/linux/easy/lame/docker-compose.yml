@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  lame:
+    build: .
+    container_name: oscp-lame-${USER_ID:-123}
+    hostname: lame
+    
+    # Network configuration
+    networks:
+      oscp_network:
+        ipv4_address: 10.11.${USER_ID:-123}.20
+    
+    # Port mappings (for debugging)
+    ports:
+      - "62021:21"     # FTP
+      - "62024:22"     # SSH
+      - "62139:139"    # NetBIOS
+      - "62445:445"    # SMB
+      - "63632:3632"   # Distcc (additional OSCP service)
+    
+    # Environment variables
+    environment:
+      - MACHINE_NAME=Lame
+      - MACHINE_IP=10.11.${USER_ID:-123}.20
+      - USER_ID=${USER_ID:-123}
+      - DIFFICULTY=Easy
+      - VULNERABILITY=CVE-2007-2447 Samba usermap
+      - FLAG_USER=OSCP{lame_user_makis_${USER_ID:-123}_$(date +%s)}
+      - FLAG_ROOT=OSCP{lame_root_samba_${USER_ID:-123}_$(date +%s)}
+    
+    # Security context
+    privileged: false
+    cap_add:
+      - NET_ADMIN
+    
+    # Resource limits
+    mem_limit: 512m
+    cpus: '0.5'
+    
+    # Volumes
+    volumes:
+      - lame_logs:/var/log
+      - lame_home:/home
+      - lame_tmp:/tmp
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "netstat", "-tlnp", "|", "grep", ":445"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Labels for management
+    labels:
+      - "oscp.machine=lame"
+      - "oscp.difficulty=easy"
+      - "oscp.os=linux"
+      - "oscp.vulnerability=cve-2007-2447"
+      - "oscp.type=samba-exploit"
+
+networks:
+  oscp_network:
+    external: true
+    name: oscp-lab-network-${USER_ID:-123}
+
+volumes:
+  lame_logs:
+    driver: local
+    labels:
+      - "oscp.machine=lame"
+      - "oscp.type=logs"
+  
+  lame_home:
+    driver: local
+    labels:
+      - "oscp.machine=lame"
+      - "oscp.type=user-data"
+      
+  lame_tmp:
+    driver: local
+    labels:
+      - "oscp.machine=lame"
+      - "oscp.type=temp-data"

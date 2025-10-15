@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  legacy:
+    build: .
+    container_name: oscp-legacy-${USER_ID:-123}
+    hostname: legacy
+    
+    # Network configuration
+    networks:
+      oscp_network:
+        ipv4_address: 10.11.${USER_ID:-123}.10
+    
+    # Port mappings (for debugging - remove in production)
+    ports:
+      - "61445:445"   # SMB
+      - "61139:139"   # NetBIOS
+      - "61022:22"     # SSH
+    
+    # Environment variables
+    environment:
+      - MACHINE_NAME=Legacy
+      - MACHINE_IP=10.11.${USER_ID:-123}.10
+      - USER_ID=${USER_ID:-123}
+      - DIFFICULTY=Easy
+      - VULNERABILITY=MS17-010 EternalBlue
+      - FLAG_USER=OSCP{legacy_user_${USER_ID:-123}_$(date +%s)}
+      - FLAG_ROOT=OSCP{legacy_root_${USER_ID:-123}_$(date +%s)}
+    
+    # Security context
+    privileged: false
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    
+    # Resource limits
+    mem_limit: 512m
+    cpus: '0.5'
+    
+    # Volumes
+    volumes:
+      - legacy_logs:/var/log
+      - legacy_home:/home
+      - ./flags:/opt/flags:ro
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "netstat", "-tlnp", "|", "grep", ":445"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Labels for management
+    labels:
+      - "oscp.machine=legacy"
+      - "oscp.difficulty=easy"
+      - "oscp.os=windows7"
+      - "oscp.vulnerability=ms17-010"
+      - "oscp.type=smb-exploit"
+
+networks:
+  oscp_network:
+    external: true
+    name: oscp-lab-network-${USER_ID:-123}
+
+volumes:
+  legacy_logs:
+    driver: local
+    labels:
+      - "oscp.machine=legacy"
+      - "oscp.type=logs"
+  
+  legacy_home:
+    driver: local
+    labels:
+      - "oscp.machine=legacy" 
+      - "oscp.type=user-data"
