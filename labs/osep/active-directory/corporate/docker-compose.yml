@@ -1,0 +1,194 @@
+version: '3.8'
+
+# OSEP Lab 1: Corporate - Basic Active Directory Domain
+# Simulates a Windows AD environment with Kerberoasting vulnerabilities
+# Network: 10.12.{user_id}.10-19
+
+services:
+  # Domain Controller (DC01) - Primary AD Controller
+  dc01:
+    build: ./dc01
+    container_name: osep-corporate-dc01-${USER_ID:-123}
+    hostname: dc01.osep.local
+    
+    networks:
+      osep_corporate:
+        ipv4_address: 10.12.${USER_ID:-123}.10
+    
+    environment:
+      - DOMAIN_NAME=osep.local
+      - DOMAIN_ADMIN_USER=administrator
+      - DOMAIN_ADMIN_PASS=P@ssw0rd123!
+      - FOREST_LEVEL=2019
+      - USER_ID=${USER_ID:-123}
+    
+    ports:
+      - "65389:389"   # LDAP
+      - "65636:636"   # LDAPS  
+      - "65088:88"    # Kerberos
+      - "65135:135"   # RPC
+    
+    volumes:
+      - dc_data:/var/lib/samba
+      - dc_sysvol:/var/lib/samba/sysvol
+      - dc_logs:/var/log
+    
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    
+    restart: unless-stopped
+    
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=domain-controller"
+      - "osep.os=windows-server-2019"
+
+  # Workstation 1 - Windows 10 Domain Member
+  ws01:
+    build: ./ws01
+    container_name: osep-corporate-ws01-${USER_ID:-123}
+    hostname: ws01.osep.local
+    
+    networks:
+      osep_corporate:
+        ipv4_address: 10.12.${USER_ID:-123}.20
+    
+    environment:
+      - DOMAIN_NAME=osep.local
+      - DC_IP=10.12.${USER_ID:-123}.10
+      - USER_ID=${USER_ID:-123}
+    
+    depends_on:
+      - dc01
+      
+    ports:
+      - "65021:22"    # SSH (for testing)
+      - "65901:3389"  # RDP
+    
+    volumes:
+      - ws01_data:/home
+    
+    restart: unless-stopped
+    
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=workstation" 
+      - "osep.os=windows-10"
+
+  # Workstation 2 - Windows 10 Domain Member  
+  ws02:
+    build: ./ws02
+    container_name: osep-corporate-ws02-${USER_ID:-123}
+    hostname: ws02.osep.local
+    
+    networks:
+      osep_corporate:
+        ipv4_address: 10.12.${USER_ID:-123}.21
+    
+    environment:
+      - DOMAIN_NAME=osep.local
+      - DC_IP=10.12.${USER_ID:-123}.10
+      - USER_ID=${USER_ID:-123}
+    
+    depends_on:
+      - dc01
+      
+    ports:
+      - "65022:22"    # SSH (for testing)
+      - "65902:3389"  # RDP
+    
+    volumes:
+      - ws02_data:/home
+    
+    restart: unless-stopped
+    
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=workstation"
+      - "osep.os=windows-10"
+
+  # File Server - Windows Server 2016
+  fs01:
+    build: ./fs01
+    container_name: osep-corporate-fs01-${USER_ID:-123}
+    hostname: fs01.osep.local
+    
+    networks:
+      osep_corporate:
+        ipv4_address: 10.12.${USER_ID:-123}.15
+    
+    environment:
+      - DOMAIN_NAME=osep.local
+      - DC_IP=10.12.${USER_ID:-123}.10
+      - USER_ID=${USER_ID:-123}
+    
+    depends_on:
+      - dc01
+      
+    ports:
+      - "65445:445"   # SMB
+      - "65139:139"   # NetBIOS
+      - "65025:22"    # SSH (for testing)
+    
+    volumes:
+      - fs_shares:/srv/shares
+      - fs_data:/home
+    
+    restart: unless-stopped
+    
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=file-server"
+      - "osep.os=windows-server-2016"
+
+networks:
+  osep_corporate:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.12.${USER_ID:-123}.0/24
+          gateway: 10.12.${USER_ID:-123}.1
+
+volumes:
+  dc_data:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=domain-controller"
+      
+  dc_sysvol:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=domain-controller"
+      
+  dc_logs:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=logs"
+      
+  ws01_data:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=workstation"
+      
+  ws02_data:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=workstation"
+      
+  fs_shares:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=file-server"
+      
+  fs_data:
+    driver: local
+    labels:
+      - "osep.lab=corporate"
+      - "osep.role=file-server"

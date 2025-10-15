@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  openvpn:
+    image: kylemanna/openvpn:2.4
+    container_name: cyberlab-openvpn
+    ports:
+      - "1194:1194/udp"
+    volumes:
+      - ./openvpn-data:/etc/openvpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    restart: unless-stopped
+    networks:
+      - cyberlab-network
+      - cyberlab-vpn
+    environment:
+      - OVPN_SERVER_URL=udp://localhost:1194
+    labels:
+      - "cyberlab.service=vpn"
+      - "cyberlab.component=openvpn-server"
+
+networks:
+  cyberlab-network:
+    name: cyberlab-network
+    external: true
+  cyberlab-vpn:
+    name: cyberlab-vpn
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

@@ -1,0 +1,109 @@
+# Container-based VM Templates for CyberLab Platform
+# This file defines the base images used for lab environments
+
+version: '3.8'
+
+services:
+  # Kali Linux Attack Box - Full pentesting environment
+  kali-full:
+    build:
+      context: ./kali-full
+      dockerfile: Dockerfile
+    image: cyberlab/kali-full:latest
+    container_name: kali-full-template
+    networks:
+      - vm-template-network
+    environment:
+      - DISPLAY=:0
+      - VNC_PASSWORD=cyberlab123
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    profiles:
+      - build-only  # Only used for building, not runtime
+
+  # DVWA - Damn Vulnerable Web Application
+  dvwa:
+    build:
+      context: ./dvwa
+      dockerfile: Dockerfile
+    image: cyberlab/dvwa:latest
+    container_name: dvwa-template
+    networks:
+      - vm-template-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=password123
+      - MYSQL_DATABASE=dvwa
+      - MYSQL_USER=dvwa
+      - MYSQL_PASSWORD=password123
+    ports:
+      - "80"
+      - "443"
+    profiles:
+      - build-only
+
+  # Vulnerable Ubuntu Server
+  ubuntu-server:
+    build:
+      context: ./ubuntu-server
+      dockerfile: Dockerfile
+    image: cyberlab/ubuntu-server:latest
+    container_name: ubuntu-server-template
+    networks:
+      - vm-template-network
+    environment:
+      - SSH_PASSWORD=password123
+    ports:
+      - "22"
+      - "80"
+      - "443"
+    profiles:
+      - build-only
+
+  # Windows Server (using servercore base)
+  windows-server:
+    build:
+      context: ./windows-server
+      dockerfile: Dockerfile
+    image: cyberlab/windows-server:latest
+    container_name: windows-server-template
+    networks:
+      - vm-template-network
+    environment:
+      - ACCEPT_EULA=Y
+    ports:
+      - "3389"  # RDP
+      - "80"
+      - "443"
+    profiles:
+      - build-only
+
+  # Metasploitable-like vulnerable Linux
+  metasploitable:
+    build:
+      context: ./metasploitable
+      dockerfile: Dockerfile
+    image: cyberlab/metasploitable:latest
+    container_name: metasploitable-template
+    networks:
+      - vm-template-network
+    environment:
+      - SSH_PASSWORD=msfadmin
+    ports:
+      - "21"   # FTP
+      - "22"   # SSH
+      - "23"   # Telnet
+      - "80"   # HTTP
+      - "139"  # NetBIOS
+      - "445"  # SMB
+    profiles:
+      - build-only
+
+networks:
+  vm-template-network:
+    driver: bridge
+    name: cyberlab-vm-templates

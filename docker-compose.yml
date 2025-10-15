@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: cyberlab_postgres
+    environment:
+      POSTGRES_DB: cyberlab
+      POSTGRES_USER: cyberlab_user
+      POSTGRES_PASSWORD: cyberlab_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - cyberlab_network
+      - cyberlab-vpn-bridge
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: cyberlab_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cyberlab_network
+      - cyberlab-vpn-bridge
+
+  # InfluxDB for metrics
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: cyberlab_influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: admin_password
+      DOCKER_INFLUXDB_INIT_ORG: cyberlab
+      DOCKER_INFLUXDB_INIT_BUCKET: metrics
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - cyberlab_network
+
+  # MinIO for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: cyberlab_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - cyberlab_network
+
+  # Apache Guacamole Database
+  guacamole_db:
+    image: postgres:15-alpine
+    container_name: guacamole_postgres
+    environment:
+      POSTGRES_DB: guacamole_db
+      POSTGRES_USER: guacamole_user
+      POSTGRES_PASSWORD: guacamole_password
+    volumes:
+      - guacamole_db_data:/var/lib/postgresql/data
+    networks:
+      - cyberlab_network
+
+  # Guacamole Daemon
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacamole_daemon
+    networks:
+      - cyberlab_network
+
+  # Guacamole Web Application
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: guacamole_web
+    depends_on:
+      - guacd
+      - guacamole_db
+    environment:
+      GUACD_HOSTNAME: guacd
+      POSTGRES_DATABASE: guacamole_db
+      POSTGRES_HOSTNAME: guacamole_db
+      POSTGRES_USER: guacamole_user
+      POSTGRES_PASSWORD: guacamole_password
+    ports:
+      - "8080:8080"
+    networks:
+      - cyberlab_network
+
+  # OpenVPN Server
+  openvpn:
+    image: kylemanna/openvpn:latest
+    container_name: cyberlab_openvpn
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "1194:1194/udp"
+    volumes:
+      - openvpn_data:/etc/openvpn
+      - ./docker/vpn/scripts:/opt/scripts:ro
+    environment:
+      OVPN_SERVER_URL: "udp://localhost:1194"
+      OVPN_NETWORK: "10.8.0.0"
+      OVPN_SUBNET: "255.255.255.0"
+      OVPN_K8S_POD_NETWORK: "10.244.0.0"
+      OVPN_K8S_POD_SUBNET: "255.255.0.0"
+    networks:
+      - cyberlab_network
+      - cyberlab-vpn-bridge
+    restart: unless-stopped
+    sysctls:
+      - net.ipv4.ip_forward=1
+
+  # Frontend (static Nginx site for lab selection)
+  frontend:
+    image: nginx:alpine
+    container_name: cyberlab_frontend
+    ports:
+      - "8088:80"
+    volumes:
+      - ./frontend/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/public:/usr/share/nginx/html:ro
+    networks:
+      - cyberlab_network
+      - cyberlab-vpn-bridge
+    depends_on:
+      - openvpn
+
+volumes:
+  postgres_data:
+  redis_data:
+  influxdb_data:
+  minio_data:
+  guacamole_db_data:
+  openvpn_data:
+
+networks:
+  cyberlab_network:
+    driver: bridge
+  cyberlab-vpn-bridge:
+    external: true

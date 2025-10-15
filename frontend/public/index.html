@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberLab Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 3rem;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      width: 90%;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      font-weight: 700;
+    }
+    .labs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .lab-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border: none;
+      border-radius: 15px;
+      padding: 2rem;
+      color: white;
+      text-decoration: none;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: block;
+    }
+    .lab-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+    .lab-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+    }
+    .lab-card p {
+      opacity: 0.9;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    .lab-status {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      margin-top: 1rem;
+    }
+    .intro-text {
+      text-align: center;
+      color: #666;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .vpn-info {
+      background: #e8f4fd;
+      border-left: 4px solid #4CAF50;
+      padding: 1rem;
+      margin: 1.5rem 0;
+      border-radius: 5px;
+    }
+    .vpn-info h4 {
+      color: #2196F3;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ CyberLab Platform</h1>
+    
+    <div class="intro-text">
+      Welcome to the CyberLab Platform! Access hands-on cybersecurity challenges through our secure VPN environment.
+    </div>
+
+    <div class="vpn-info">
+      <h4>🔒 VPN Access Required</h4>
+      <p>All labs are accessible only through the VPN connection. Make sure you're connected to access the exercises.</p>
+    </div>
+
+    <div class="labs-grid">
+      <a href="http://10.10.0.5/" class="lab-card" target="_blank">
+        <h3>🗃️ OSWA SQL Injection Lab</h3>
+        <p>
+          Practice SQL injection techniques on the SecureBank vulnerable banking application. 
+          Features authentication bypass and blind SQL injection challenges.
+        </p>
+        <p><strong>Difficulty:</strong> Beginner to Intermediate</p>
+        <p><strong>Objectives:</strong> Find 3 hidden flags</p>
+        <span class="lab-status">✅ Active</span>
+      </a>
+
+      <div class="lab-card" style="opacity: 0.6;">
+        <h3>🚀 XSS Laboratory</h3>
+        <p>
+          Cross-Site Scripting (XSS) challenges including reflected, stored, and DOM-based XSS vulnerabilities.
+        </p>
+        <p><strong>Difficulty:</strong> Beginner</p>
+        <span class="lab-status">🔧 Coming Soon</span>
+      </div>
+
+      <div class="lab-card" style="opacity: 0.6;">
+        <h3>🔐 Directory Traversal Lab</h3>
+        <p>
+          Practice path traversal and local file inclusion vulnerabilities in a safe environment.
+        </p>
+        <p><strong>Difficulty:</strong> Intermediate</p>
+        <span class="lab-status">🔧 Coming Soon</span>
+      </div>
+
+      <div class="lab-card" style="opacity: 0.6;">
+        <h3>💉 Command Injection Lab</h3>
+        <p>
+          Learn to exploit OS command injection vulnerabilities and practice remediation techniques.
+        </p>
+        <p><strong>Difficulty:</strong> Advanced</p>
+        <span class="lab-status">🔧 Coming Soon</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: center; color: #888; font-size: 0.9rem;">
+      <p>📱 Access from VPN: <code>http://10.10.0.7:80</code></p>
+      <p>🌐 Local Access: <code>http://localhost:8088</code></p>
+    </div>
+  </div>
+</body>
+</html>

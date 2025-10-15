@@ -1,0 +1,107 @@
+version: '3.8'
+
+# OSED Lab 1: Vanilla - Basic Stack Overflow
+# Learning: Basic buffer overflow, EIP control, shellcode injection
+# Target: Windows 7 simulation with no protections
+# Network: 10.13.{user_id}.10
+
+services:
+  # Windows 7 Target (No Protections)
+  vanilla-target:
+    build: ./target
+    container_name: osed-vanilla-target-${USER_ID:-123}
+    hostname: vanilla-target
+    
+    networks:
+      osed_vanilla:
+        ipv4_address: 10.13.${USER_ID:-123}.10
+    
+    environment:
+      - LAB_NAME=Lab 1 Vanilla
+      - TARGET_OS=Windows 7 SP1
+      - PROTECTIONS=none
+      - VULNERABILITY=stack_overflow
+      - USER_ID=${USER_ID:-123}
+    
+    ports:
+      - "69999:9999"   # Vulnerable TCP service
+      - "69022:22"     # SSH (for debugging)
+      - "69080:80"     # Web interface (optional)
+    
+    volumes:
+      - vanilla_workspace:/workspace
+      - vanilla_exploits:/exploits
+      - vanilla_logs:/var/log
+    
+    # No security restrictions for educational purposes
+    privileged: false
+    cap_add:
+      - SYS_PTRACE  # For debugging
+    
+    restart: unless-stopped
+    
+    labels:
+      - "osed.lab=vanilla"
+      - "osed.difficulty=beginner"
+      - "osed.vulnerability=stack-overflow"
+      - "osed.target=windows7"
+
+  # Kali Attack Box (Optional - for exploit development)
+  vanilla-attacker:
+    build: ./attacker
+    container_name: osed-vanilla-attacker-${USER_ID:-123}
+    hostname: vanilla-attacker
+    
+    networks:
+      osed_vanilla:
+        ipv4_address: 10.13.${USER_ID:-123}.100
+    
+    environment:
+      - LAB_NAME=Lab 1 Vanilla
+      - TARGET_IP=10.13.${USER_ID:-123}.10
+      - USER_ID=${USER_ID:-123}
+    
+    ports:
+      - "69023:22"     # SSH access
+    
+    volumes:
+      - vanilla_workspace:/workspace
+      - vanilla_exploits:/exploits
+      - ./exploits:/home/exploits
+    
+    depends_on:
+      - vanilla-target
+    
+    restart: unless-stopped
+    
+    labels:
+      - "osed.lab=vanilla"
+      - "osed.role=attacker"
+      - "osed.os=kali-linux"
+
+networks:
+  osed_vanilla:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.13.${USER_ID:-123}.0/24
+          gateway: 10.13.${USER_ID:-123}.1
+
+volumes:
+  vanilla_workspace:
+    driver: local
+    labels:
+      - "osed.lab=vanilla"
+      - "osed.type=workspace"
+      
+  vanilla_exploits:
+    driver: local
+    labels:
+      - "osed.lab=vanilla"
+      - "osed.type=exploits"
+      
+  vanilla_logs:
+    driver: local
+    labels:
+      - "osed.lab=vanilla"
+      - "osed.type=logs"

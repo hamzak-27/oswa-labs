@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # Target: Vulnerable Windows 7 system with SEH overflow
+  target:
+    build:
+      context: ./target
+      dockerfile: Dockerfile
+    container_name: osed-lab2-target
+    hostname: osed-lab2-target
+    networks:
+      lab_network:
+        ipv4_address: 10.13.37.10
+    ports:
+      - "10022:22"      # SSH for debugging
+      - "10080:8080"    # Vulnerable HTTP server
+      - "10443:8443"    # HTTPS service (if needed)
+    environment:
+      - LAB_NAME=OSED Lab 2: Basic SEH
+      - LAB_DIFFICULTY=Beginner
+      - LAB_TYPE=SEH Overflow
+      - TARGET_IP=10.13.37.10
+      - VULNERABLE_PORT=8080
+    volumes:
+      - ./target:/lab-files:ro
+    cap_add:
+      - SYS_PTRACE  # For debugging
+    security_opt:
+      - seccomp:unconfined  # Allow debugging
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    
+  # Optional: Kali Linux attacker container
+  attacker:
+    build:
+      context: ./attacker
+      dockerfile: Dockerfile
+    container_name: osed-lab2-attacker
+    hostname: osed-lab2-attacker
+    networks:
+      lab_network:
+        ipv4_address: 10.13.37.1
+    environment:
+      - LAB_NAME=OSED Lab 2: Basic SEH
+      - TARGET_IP=10.13.37.10
+      - VULNERABLE_PORT=8080
+    volumes:
+      - ./attacker:/workspace
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    profiles: ["with-attacker"]  # Optional service
+
+networks:
+  lab_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.13.37.0/24
+          gateway: 10.13.37.1
+
+# Named volumes for persistent data
+volumes:
+  target_logs:
+    driver: local
+  exploit_workspace:
+    driver: local
+
+# Health checks and monitoring
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s

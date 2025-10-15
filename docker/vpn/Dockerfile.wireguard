@@ -1,0 +1,37 @@
+# WireGuard VPN Server for CyberLab Platform
+FROM linuxserver/wireguard:latest
+
+# Environment variables for configuration
+ENV PUID=1000
+ENV PGID=1000
+ENV TZ=Etc/UTC
+ENV SERVERURL=auto
+ENV SERVERPORT=51820
+ENV PEERS=10
+ENV PEERDNS=auto
+ENV INTERNAL_SUBNET=10.13.13.0/24
+ENV ALLOWEDIPS=0.0.0.0/0
+
+# Create directories
+RUN mkdir -p /config/wg_confs
+RUN mkdir -p /config/peer_configs
+RUN mkdir -p /var/log/wireguard
+
+# Copy configuration templates
+COPY wg0.conf.template /etc/wireguard/
+COPY peer.conf.template /etc/wireguard/
+COPY generate-peer-config.sh /usr/local/bin/
+COPY wireguard-monitor.sh /usr/local/bin/
+
+# Set permissions
+RUN chmod +x /usr/local/bin/generate-peer-config.sh
+RUN chmod +x /usr/local/bin/wireguard-monitor.sh
+
+# Expose WireGuard port
+EXPOSE 51820/udp
+
+# Custom entrypoint for additional setup
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
