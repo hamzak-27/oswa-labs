@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # MySQL Database for SQL Injection Lab
+  mysql:
+    image: mysql:8.0
+    container_name: oswa-sqli-mysql-prod
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: oswa_sqli
+      MYSQL_USER: webapp
+      MYSQL_PASSWORD: ${SQL_WEBAPP_PASSWORD}
+    ports:
+      - "3306"  # Internal only
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql_data_prod:/var/lib/mysql
+    networks:
+      - oswa-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 30s
+
+  # SQL Injection Lab Web Application
+  sqli-lab:
+    build: .
+    container_name: oswa-sqli-web-prod
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8081:80"  # Expose on port 8081
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: oswa_sqli
+      MYSQL_USER: webapp
+      MYSQL_PASSWORD: ${SQL_WEBAPP_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${SQL_ROOT_PASSWORD}
+      LAB_NAME: "OSWA SQL Injection Mastery"
+      LAB_DIFFICULTY: "Beginner"
+      LAB_CATEGORY: "Web Application Security"
+      FLAGS_COUNT: "5"
+    networks:
+      - oswa-network
+    volumes:
+      - ./web-app/flags:/var/www/html/flags:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sqli-lab.rule=PathPrefix(`/sqli`)"
+      - "traefik.http.services.sqli-lab.loadbalancer.server.port=80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Simple Dashboard
+  dashboard:
+    build: ../oswa-dashboard
+    container_name: oswa-dashboard-prod
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      API_URL: http://api:8000
+      NEXT_PUBLIC_API_URL: https://${DOMAIN_NAME}/api
+    networks:
+      - oswa-network
+    restart: unless-stopped
+
+  # VPN Server
+  vpn-server:
+    build: ../vpn-server
+    container_name: oswa-vpn-prod
+    privileged: true
+    ports:
+      - "1194:1194/udp"  # OpenVPN port
+      - "8080:8080"      # Management interface
+    environment:
+      VPN_DOMAIN: ${DOMAIN_NAME}
+    networks:
+      - oswa-network
+    volumes:
+      - vpn_data:/etc/openvpn
+      - /lib/modules:/lib/modules:ro
+    devices:
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: oswa-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/static:/usr/share/nginx/html:ro
+    networks:
+      - oswa-network
+    depends_on:
+      - sqli-lab
+      - dashboard
+    restart: unless-stopped
+
+networks:
+  oswa-network:
+    driver: bridge
+    name: oswa-production-network
+
+volumes:
+  mysql_data_prod:
+    name: oswa-sqli-mysql-data-prod
+  vpn_data:
+    name: oswa-vpn-data-prod

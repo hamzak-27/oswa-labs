@@ -1,0 +1,370 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # CORE DATABASE SERVICES
+  # =============================================================================
+  
+  # Main MongoDB for lab management and user data
+  mongodb-main:
+    image: mongo:5.0
+    container_name: oswa-mongodb-main
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: oswa_platform_2024
+      MONGO_INITDB_DATABASE: oswa_platform
+    volumes:
+      - mongodb_main_data:/data/db
+      - ./database/init-main.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks:
+      - oswa-network
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for session management and caching
+  redis-main:
+    image: redis:7-alpine
+    container_name: oswa-redis-main
+    restart: unless-stopped
+    command: redis-server --requirepass oswa_redis_2024
+    volumes:
+      - redis_main_data:/data
+    networks:
+      - oswa-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # LAB MANAGEMENT API
+  # =============================================================================
+  
+  lab-management-api:
+    build:
+      context: ./lab-management-api
+      dockerfile: Dockerfile
+    container_name: oswa-lab-management-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - MONGO_URI=mongodb://admin:oswa_platform_2024@mongodb-main:27017/oswa_platform?authSource=admin
+      - REDIS_HOST=redis-main
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=oswa_redis_2024
+      - JWT_SECRET=oswa_jwt_secret_production_2024
+      - SESSION_SECRET=oswa_session_secret_production_2024
+      - CORS_ORIGINS=http://localhost:3002,http://localhost:3000,http://localhost:3001
+      - XSS_LAB_URL=http://xss-lab-backend:5000
+      - JWT_LAB_URL=http://jwt-lab-backend:5001
+      - SQL_LAB_URL=http://sql-lab-backend:3000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./lab-management-api:/app
+      - lab_uploads:/app/uploads
+    networks:
+      - oswa-network
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb-main:
+        condition: service_healthy
+      redis-main:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # FRONTEND DASHBOARD
+  # =============================================================================
+  
+  oswa-dashboard:
+    build:
+      context: ./oswa-dashboard
+      dockerfile: Dockerfile
+    container_name: oswa-dashboard
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_XSS_LAB_URL=http://localhost:5000
+      - NEXT_PUBLIC_JWT_LAB_URL=http://localhost:5001
+      - NEXT_PUBLIC_SQL_LAB_URL=http://localhost:3000
+      - NODE_ENV=production
+    networks:
+      - oswa-network
+    ports:
+      - "3002:3000"
+    depends_on:
+      - lab-management-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # XSS LAB
+  # =============================================================================
+  
+  # XSS Lab Database
+  xss-lab-mongodb:
+    image: mongo:5.0
+    container_name: oswa-xss-lab-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: xss_lab_2024
+      MONGO_INITDB_DATABASE: xsslab
+    volumes:
+      - ./xss-lab/database/init.js:/docker-entrypoint-initdb.d/init.js:ro
+      - xss_lab_mongodb_data:/data/db
+    networks:
+      - oswa-network
+    ports:
+      - "27018:27017"
+
+  # XSS Lab Backend
+  xss-lab-backend:
+    build:
+      context: ./xss-lab/backend
+      dockerfile: Dockerfile
+    container_name: oswa-xss-lab-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - MONGO_URI=mongodb://admin:xss_lab_2024@xss-lab-mongodb:27017/xsslab?authSource=admin
+      - JWT_SECRET=vulnerable_jwt_secret_2024
+      - SESSION_SECRET=xss_session_secret_key
+      - ADMIN_PASSWORD=admin123
+    volumes:
+      - ./xss-lab/backend:/app
+      - xss_lab_uploads:/app/uploads
+    networks:
+      - oswa-network
+    ports:
+      - "5000:5000"
+    depends_on:
+      - xss-lab-mongodb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # JWT LAB
+  # =============================================================================
+  
+  # JWT Lab Database
+  jwt-lab-mongodb:
+    image: mongo:5.0
+    container_name: oswa-jwt-lab-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: jwt_lab_2024
+      MONGO_INITDB_DATABASE: jwtlab
+    volumes:
+      - ./jwt-attacks-lab/database/init.js:/docker-entrypoint-initdb.d/init.js:ro
+      - jwt_lab_mongodb_data:/data/db
+    networks:
+      - oswa-network
+    ports:
+      - "27019:27017"
+
+  # JWT Lab Backend
+  jwt-lab-backend:
+    build:
+      context: ./jwt-attacks-lab/backend
+      dockerfile: Dockerfile
+    container_name: oswa-jwt-lab-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - MONGO_URI=mongodb://admin:jwt_lab_2024@jwt-lab-mongodb:27017/jwtlab?authSource=admin
+      - JWT_SECRET_WEAK=weak_secret_123
+      - JWT_SECRET_STRONG=very_strong_secret_key_that_should_be_unguessable_2024
+      - RSA_PRIVATE_KEY_PATH=/app/keys/rsa_private.pem
+      - RSA_PUBLIC_KEY_PATH=/app/keys/rsa_public.pem
+      - HMAC_KEY=shared_secret_hmac_key
+      - SESSION_SECRET=jwt_session_secret_key
+      - ADMIN_JWT_SECRET=admin_only_secret_2024
+    volumes:
+      - ./jwt-attacks-lab/backend:/app
+      - ./jwt-attacks-lab/keys:/app/keys:ro
+      - jwt_lab_uploads:/app/uploads
+    networks:
+      - oswa-network
+    ports:
+      - "5001:5001"
+    depends_on:
+      - jwt-lab-mongodb
+      - jwt-key-generator
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # JWT Key Generator Service
+  jwt-key-generator:
+    image: alpine:latest
+    container_name: oswa-jwt-key-generator
+    restart: "no"
+    volumes:
+      - ./jwt-attacks-lab/keys:/keys
+    networks:
+      - oswa-network
+    command: >
+      sh -c "
+        apk add --no-cache openssl &&
+        cd /keys &&
+        if [ ! -f rsa_private.pem ]; then
+          echo 'Generating RSA key pair for JWT lab...' &&
+          openssl genrsa -out rsa_private.pem 2048 &&
+          openssl rsa -in rsa_private.pem -pubout -out rsa_public.pem &&
+          echo 'RSA keys generated successfully!'
+        else
+          echo 'RSA keys already exist.'
+        fi &&
+        sleep 10
+      "
+
+  # =============================================================================
+  # SQL INJECTION LAB
+  # =============================================================================
+  
+  # SQL Lab Database
+  sql-lab-mysql:
+    image: mysql:8.0
+    container_name: oswa-sql-lab-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: sql_lab_root_2024
+      MYSQL_DATABASE: securebank
+      MYSQL_USER: webapp
+      MYSQL_PASSWORD: sql_lab_2024
+    volumes:
+      - ./sql-injection-lab/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - sql_lab_mysql_data:/var/lib/mysql
+    networks:
+      - oswa-network
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SQL Lab Backend
+  sql-lab-backend:
+    build:
+      context: ./sql-injection-lab
+      dockerfile: Dockerfile
+    container_name: oswa-sql-lab-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=sql-lab-mysql
+      - DB_PORT=3306
+      - DB_NAME=securebank
+      - DB_USER=webapp
+      - DB_PASSWORD=sql_lab_2024
+      - SESSION_SECRET=sql_session_secret_2024
+    volumes:
+      - ./sql-injection-lab:/app
+    networks:
+      - oswa-network
+    ports:
+      - "3000:3000"
+    depends_on:
+      sql-lab-mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # REVERSE PROXY (NGINX)
+  # =============================================================================
+  
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: oswa-nginx-proxy
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - oswa-network
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - oswa-dashboard
+      - lab-management-api
+      - xss-lab-backend
+      - jwt-lab-backend
+      - sql-lab-backend
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+
+networks:
+  oswa-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+
+volumes:
+  # Main platform data
+  mongodb_main_data:
+  redis_main_data:
+  lab_uploads:
+  
+  # XSS Lab data
+  xss_lab_mongodb_data:
+  xss_lab_uploads:
+  
+  # JWT Lab data
+  jwt_lab_mongodb_data:
+  jwt_lab_uploads:
+  
+  # SQL Lab data
+  sql_lab_mysql_data:
+
+# =============================================================================
+# HEALTH CHECKS AND RESTART POLICIES
+# =============================================================================
+
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s

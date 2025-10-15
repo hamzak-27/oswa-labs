@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:5.0
+    container_name: oswa-jwt-db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: jwt_lab_2024
+      MONGO_INITDB_DATABASE: jwtlab
+    volumes:
+      - ./database/init.js:/docker-entrypoint-initdb.d/init.js:ro
+      - jwt_mongo_data:/data/db
+    networks:
+      - jwt-network
+    ports:
+      - "27018:27017"
+
+  # Node.js Backend API with JWT vulnerabilities
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: oswa-jwt-backend
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+      - MONGO_URI=mongodb://admin:jwt_lab_2024@mongodb:27017/jwtlab?authSource=admin
+      - JWT_SECRET_WEAK=weak_secret_123
+      - JWT_SECRET_STRONG=very_strong_secret_key_that_should_be_unguessable_2024
+      - RSA_PRIVATE_KEY_PATH=/app/keys/rsa_private.pem
+      - RSA_PUBLIC_KEY_PATH=/app/keys/rsa_public.pem
+      - HMAC_KEY=shared_secret_hmac_key
+      - SESSION_SECRET=jwt_session_secret_key
+      - ADMIN_JWT_SECRET=admin_only_secret_2024
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./keys:/app/keys:ro
+    networks:
+      - jwt-network
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mongodb
+    command: npm run dev
+
+  # React Frontend for JWT Lab
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: oswa-jwt-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001
+      - REACT_APP_NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - jwt-network
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    command: npm start
+
+  # Key Generator Service (generates RSA keys for testing)
+  key-generator:
+    image: alpine:latest
+    container_name: jwt-key-generator
+    volumes:
+      - ./keys:/keys
+    networks:
+      - jwt-network
+    command: >
+      sh -c "
+        apk add --no-cache openssl &&
+        cd /keys &&
+        if [ ! -f rsa_private.pem ]; then
+          echo 'Generating RSA key pair for JWT lab...' &&
+          openssl genrsa -out rsa_private.pem 2048 &&
+          openssl rsa -in rsa_private.pem -pubout -out rsa_public.pem &&
+          echo 'RSA keys generated successfully!'
+        else
+          echo 'RSA keys already exist.'
+        fi &&
+        sleep 10
+      "
+
+  # JWT Decoder/Debugger Service
+  jwt-debugger:
+    build:
+      context: ./jwt-debugger
+      dockerfile: Dockerfile
+    container_name: oswa-jwt-debugger
+    environment:
+      - PORT=8080
+    networks:
+      - jwt-network
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./jwt-debugger:/app
+      - /app/node_modules
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: oswa-jwt-proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - jwt-network
+    ports:
+      - "81:80"
+    depends_on:
+      - frontend
+      - backend
+      - jwt-debugger
+
+networks:
+  jwt-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  jwt_mongo_data:
+
+# Health checks
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s

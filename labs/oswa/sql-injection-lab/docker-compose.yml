@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: oswa-sqli-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: oswa_sqli
+      MYSQL_USER: webapp
+      MYSQL_PASSWORD: webapp_password
+    ports:
+      - "3306"  # Internal port only
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql_data:/var/lib/mysql
+    networks:
+      - oswa-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Vulnerable Web Application
+  web:
+    build: .
+    container_name: oswa-sqli-web
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "80"  # Will be mapped dynamically by lab orchestrator
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: oswa_sqli
+      MYSQL_USER: webapp
+      MYSQL_PASSWORD: webapp_password
+      MYSQL_ROOT_PASSWORD: root_password
+      # Lab configuration
+      LAB_NAME: "OSWA SQL Injection Mastery"
+      LAB_DIFFICULTY: "Beginner"
+      LAB_CATEGORY: "Web Application Security"
+      FLAGS_COUNT: "3"
+    networks:
+      - oswa-network
+    volumes:
+      - ./web-app/flags:/var/www/html/flags:ro
+    labels:
+      - "cyberlab.lab=oswa-sql-injection"
+      - "cyberlab.category=web-security"
+      - "cyberlab.difficulty=beginner"
+      - "cyberlab.flags=3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  oswa-network:
+    driver: bridge
+    name: oswa-sql-injection-network
+
+volumes:
+  mysql_data:
+    name: oswa-sqli-mysql-data

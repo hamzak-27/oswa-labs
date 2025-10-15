@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="OSWA XSS Lab - SecureShare Social Platform (Vulnerable for Educational Purposes)"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    
+    <!-- Custom CSS for vulnerabilities -->
+    <style>
+      /* Intentionally weak CSP and inline styles for educational XSS scenarios */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        background-color: #f8f9fa;
+      }
+      
+      .navbar-brand {
+        font-weight: bold;
+        color: #2563eb !important;
+      }
+      
+      .vulnerability-banner {
+        background: linear-gradient(45deg, #dc3545, #fd7e14);
+        color: white;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+      
+      .flag-container {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+        display: none;
+      }
+      
+      .xss-payload {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: 'Courier New', monospace;
+        margin: 10px 0;
+      }
+      
+      .vulnerable-content {
+        border: 2px dashed #dc3545;
+        padding: 15px;
+        margin: 10px 0;
+        background: #fff5f5;
+      }
+    </style>
+    
+    <title>SecureShare - OSWA XSS Lab</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    
+    <!-- Vulnerability Warning Banner -->
+    <div class="vulnerability-banner">
+      ⚠️ EDUCATIONAL LAB: This application contains intentional security vulnerabilities for learning purposes!
+    </div>
+    
+    <div id="root"></div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

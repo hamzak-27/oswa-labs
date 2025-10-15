@@ -1,0 +1,74 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+credentials.txt
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# Docker
+.docker/
+
+# VPN Data
+vpn-server/data/
+vpn-server/configs/server.conf
+
+# SSL Certificates
+nginx/ssl/
+*.pem
+*.key
+*.crt
+
+# Database Data
+**/data/
+mongodb-data/
+mysql-data/
+redis-data/
+
+# Logs
+logs/
+*.log
+
+# OS Generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+
+# Backup files
+backup.sh.bak
+*.backup
+credentials_backup.txt
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Coverage reports
+coverage/
+
+# Dependencies lock files (optional - comment out if you want to include them)
+# package-lock.json
+# yarn.lock

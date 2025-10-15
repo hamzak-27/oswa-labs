@@ -1,0 +1,23 @@
+{
+  "name": "oswa-xss-admin-bot",
+  "version": "1.0.0",
+  "description": "OSWA XSS Lab - Admin Bot for Stored XSS Testing",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "express": "^4.18.0",
+    "axios": "^1.3.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "keywords": ["xss", "admin-bot", "puppeteer", "security", "oswa"],
+  "author": "OSWA Labs",
+  "license": "MIT"
+}
