@@ -66,13 +66,15 @@ const JWTUtils = {
       switch (algorithm) {
         case 'HS256':
         case 'HS512':
-          return jwt.sign(payload, secret, { algorithm, expiresIn: '1h', ...options });
+          const hmacOptions = { algorithm, expiresIn: options.expiresIn || '1h' };
+          return jwt.sign(payload, secret, hmacOptions);
         
         case 'RS256':
           if (!RSA_PRIVATE_KEY) {
             throw new Error('RSA private key not available');
           }
-          return jwt.sign(payload, RSA_PRIVATE_KEY, { algorithm, expiresIn: '1h', ...options });
+          const rsaOptions = { algorithm, expiresIn: options.expiresIn || '1h' };
+          return jwt.sign(payload, RSA_PRIVATE_KEY, rsaOptions);
         
         case 'none':
           // VULNERABILITY: 'none' algorithm support
@@ -143,11 +145,17 @@ const JWTUtils = {
         // VULNERABILITY: Path traversal in kid parameter
         let keyPath = header.kid;
         
-        // Basic attempt at sanitization (easily bypassed)
-        if (!keyPath.includes('../') && !keyPath.includes('..\\')) {
+        // Basic attempt at sanitization (easily bypassed with URL encoding)
+        const decodedPath = decodeURIComponent(keyPath);
+        if (!decodedPath.includes('../') && !decodedPath.includes('..\\')) {
+          // Create a flag file for testing if it doesn't exist
+          const flagPath = path.join('/app/keys', 'flag.txt');
+          if (!fs.existsSync(flagPath)) {
+            fs.writeFileSync(flagPath, 'FLAG{JWT_1NJ3CT10N_V1A_K1D_CL41M}');
+          }
           try {
             // VULNERABILITY: Read arbitrary files based on kid parameter
-            const keyContent = fs.readFileSync(path.join('/app/keys', keyPath), 'utf8');
+            const keyContent = fs.readFileSync(path.join('/app/keys', decodedPath), 'utf8');
             
             // Check if it's a flag file
             if (keyContent.includes('FLAG{')) {
@@ -301,21 +309,25 @@ app.post('/api/auth/login', async (req, res) => {
     user.last_login = new Date();
     await user.save();
     
-    // Log successful login
-    await AuditLog.create({
-      event_type: 'login_attempt',
-      user_id: user._id,
-      username: user.username,
-      success: true,
-      jwt_algorithm: jwtOptions.algorithm,
-      ip_address: req.ip,
-      user_agent: req.get('User-Agent'),
-      timestamp: new Date(),
-      details: {
-        permissions_granted: user.permissions,
-        token_version: user.jwt_version
-      }
-    });
+    // Log successful login (simplified for testing)
+    try {
+      await AuditLog.create({
+        event_type: 'login_attempt',
+        user_id: user._id,
+        username: user.username,
+        success: true,
+        jwt_algorithm: jwtOptions.algorithm,
+        ip_address: req.ip || '127.0.0.1',
+        user_agent: req.get('User-Agent') || 'Unknown',
+        timestamp: new Date(),
+        details: {
+          permissions_granted: user.permissions,
+          token_version: user.jwt_version
+        }
+      });
+    } catch (auditError) {
+      console.warn('Audit log failed:', auditError.message);
+    }
     
     res.json({
       success: true,
